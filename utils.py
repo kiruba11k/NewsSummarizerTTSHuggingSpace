@@ -30,42 +30,41 @@ os.makedirs(AUDIO_SAVE_DIR, exist_ok=True)
 
 
 def fetch_articles(company: str, max_articles=10) -> List[Dict[str, Any]]:
-    """Fetches news articles using Google News RSS feed."""
+    """
+    Fetches news articles using Google News RSS feed and extracts the title, link, and summary.
+    """
     encoded_query = quote(company)
     rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-US&gl=US&ceid=US:en"
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://news.google.com/"
     }
 
-    try:
-        response = requests.get(rss_url, headers=headers)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "xml")
-        articles = []
+    response = requests.get(rss_url, headers=headers)
+    if response.status_code != 200:
+        return [{"error": f"Failed to fetch news: {response.status_code}"}]
 
-        for item in soup.find_all("item")[:max_articles]:
-            title = item.find("title").text.strip() if item.find("title") else "No Title"
-            link = item.find("link").text.strip() if item.find("link") else "No Link"
-            summary = item.find("description").text.strip() if item.find("description") else "No summary available."
+    soup = BeautifulSoup(response.content, "xml")  # Parse RSS XML response
+    articles = []
 
-            articles.append({"title": title, "summary": summary, "url": link})
+    for item in soup.find_all("item")[:max_articles]:
+        title = item.find("title").text.strip() if item.find("title") else "No Title"
+        link = item.find("link").text.strip() if item.find("link") else "No Link"
+        summary = item.find("description").text.strip() if item.find("description") else "No summary available."
 
-        return articles if articles else [{"error": f"No articles found for {company}"}]
+        articles.append({"title": title, "summary": summary, "url": link})
 
-    except requests.exceptions.RequestException as e:
-        return [{"error": f"Failed to fetch news: {str(e)}"}]
+    return articles if articles else [{"error": f"No articles found for {company}"}]
 
 
 def extract_topics(text: str, num_topics: int = 5) -> list:
-    """Extracts important topics from a text using TF IDF."""
     if not text:
         return ["No valid text provided"]
 
     # Unescape HTML entities & remove HTML tags
+    text = html.unescape(text)
     text = re.sub(r'<.*?>', '', text)
 
     # Remove numbers, punctuation, and convert to lowercase
