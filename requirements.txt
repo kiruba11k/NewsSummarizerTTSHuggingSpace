@@ -1,0 +1,11 @@
+waitress
+requests
+beautifulsoup4
+nltk
+deep-translator
+gtts
+scikit-learn
+flask
+Flask[async]
+lxml
+googletrans
